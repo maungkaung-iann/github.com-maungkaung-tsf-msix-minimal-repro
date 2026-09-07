@@ -1,0 +1,74 @@
+#include <Windows.h>
+#include <msctf.h>
+#include <Objbase.h>
+
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+
+static const GUID TEST_CLSID =
+{ 0x7A0C45B1, 0x3E89, 0x4F7B, {0xA1,0x42,0x91,0x87,0x65,0xCC,0x33,0x10} };
+
+static std::filesystem::path logPath()
+{
+    wchar_t buffer[32768]{};
+    DWORD len = GetEnvironmentVariableW(
+        L"LOCALAPPDATA",
+        buffer,
+        static_cast<DWORD>(std::size(buffer))
+    );
+
+    if (len > 0 && len < std::size(buffer)) {
+        std::filesystem::path dir =
+            std::filesystem::path(buffer) / L"MyanglishIME";
+
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+
+        return dir / L"tsf-minimal-probe.log";
+    }
+
+    return L"tsf-minimal-probe.log";
+}
+
+static void logHr(const wchar_t* name, HRESULT hr)
+{
+    std::wofstream file(logPath(), std::ios::app);
+
+    file << name
+         << L"=0x"
+         << std::uppercase
+         << std::hex
+         << std::setw(8)
+         << std::setfill(L'0')
+         << static_cast<unsigned long>(hr)
+         << L"\n";
+}
+
+int wmain()
+{
+    HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    logHr(L"CoInitializeEx", hr);
+
+    ITfInputProcessorProfiles* profiles = nullptr;
+
+    hr = CoCreateInstance(
+        CLSID_TF_InputProcessorProfiles,
+        nullptr,
+        CLSCTX_INPROC_SERVER,
+        IID_ITfInputProcessorProfiles,
+        reinterpret_cast<void**>(&profiles)
+    );
+
+    logHr(L"CoCreateInstance", hr);
+
+    if (SUCCEEDED(hr)) {
+        hr = profiles->Register(TEST_CLSID);
+        logHr(L"Register", hr);
+        profiles->Release();
+    }
+
+    CoUninitialize();
+
+    return FAILED(hr) ? 1 : 0;
+}
