@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(TsfMinimalProbe LANGUAGES CXX)
+
+add_executable(TsfMinimalProbe main.cpp)
+
+target_compile_features(TsfMinimalProbe PRIVATE cxx_std_17)
+
+target_compile_definitions(
+    TsfMinimalProbe
+    PRIVATE
+    UNICODE
+    _UNICODE
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+)
+
+target_link_libraries(
+    TsfMinimalProbe
+    PRIVATE
+    ole32
+    uuid
+)
